@@ -14,9 +14,6 @@ library(xts)
 library(anytime)
 library(forecast)
 
-save.image("Project_6.Rdate")
-
-load("Project_6.Rdate")
 
 nvda_closing_price <- read.csv("nvidia_stock.csv") %>%
 mutate(Date = anydate(Date))
