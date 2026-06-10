@@ -1,0 +1,95 @@
+---
+title: "Project_6_DamianRiosJr"
+author: "Damian Rios Jr"
+date: "2026-04-09"
+output:
+  word_document: default
+  html_document: default
+---
+
+```{r}
+library(haven)
+library(tidyverse)
+library(xts)
+library(anytime)
+library(forecast)
+
+save.image("Project_6.Rdate")
+
+load("Project_6.Rdate")
+
+nvda_closing_price <- read.csv("nvidia_stock.csv") %>%
+mutate(Date = anydate(Date))
+```
+
+
+#1
+```{r}
+nvda_closing_price_xts <- as.xts(nvda_closing_price$NVDA, order.by = nvda_closing_price$Date)
+
+plot(nvda_closing_price_xts, ylab = "NVDA", xlab= "Date")
+
+Model1 <- acf(nvda_closing_price$NVDA)
+list(Model1[0:10])
+
+pacf(nvda_closing_price_xts)
+```
+
+The ACF plot shows that Nvidia's closing price at current day (t) shows significant autocorrelation with the previous 32 days, accompanied by a slow decaying pattern rather than a sharp cutoff. This suggests the series is non-stationary and implies q = 0. The PACF plot indicates Nvidia's closing price is highly correlated with the previous days price but shows no significant correlation with earlier lags, suggesting p = 1. Therefore, we can estimate the AR model by one lag.
+
+
+#2
+```{r}
+diff(nvda_closing_price_xts, lag = 1)
+
+plot(diff(nvda_closing_price_xts, lag = 1), type = "l")
+plot(diff(nvda_closing_price_xts, lag = 2), type = "l")
+```
+
+Applying the first difference is sufficient to de-trend the time series. The second difference does not change it much. Therefore the suggested ARIMA differencing parameter is d = 1.
+
+
+#3
+```{r}
+arima1 <-arima(nvda_closing_price_xts, order = c(1,1,0), method = "ML")
+summary(arima1)
+```
+
+AIC = 7141.79
+RMSE = 2.404454
+
+
+#4
+```{r}
+auto_arima <- auto.arima(nvda_closing_price_xts, ic = "aic", trace = TRUE)
+summary(auto_arima)
+```
+
+ARIMA(3,1,1) with an aic of 7119.305 and RMSE of 2.380945
+
+My manual estimation and the auto.arima model both agree on a differencing of d = 1. For my AR parameter, auto.arima produced p = 3, where I originally stated p = 1. Looking back at the PACF, lag 3 looked to be borderline significant which might have supported arima.auto AR parameter. For the MA parameter, auto.arima selected q = 1, which wasn't evident in the ACF given its decaying pattern and no sharp cutoff. This led me to choose q = 0.
+
+Comparing the two models, auto.arima ARIMA (3,1,1) produced a AIC of 7119.305 and RMSE 2.380945. The auto.arima model produced a lower AIC AND RMSE than my manual ARIMA (1,1,0) model which measured at a AIC of 7141.79 and a RMSE of 2.404454. Since lower AIC and RMSE values indicate a better fitting model, the auto.arima model outperforms my manual estimated ARIMA model. 
+
+#5
+```{r}
+arima_adjusted1 <-arima(nvda_closing_price_xts, order = c(1,1,1), method = "ML")
+summary(arima_adjusted1)
+
+arima_adjusted2 <-arima(nvda_closing_price_xts, order = c(2,1,2), method = "ML")
+summary(arima_adjusted2)
+
+arima_adjusted3 <-arima(nvda_closing_price_xts, order = c(3,1,0), method = "ML")
+summary(arima_adjusted3)
+```
+
+I tested several combinations including ARIMA (1,1,1), ARIMA (2,1,2), and ARIMA (3,1,0). I was not able to generate a ARIMA model with a lower AIC or RMSE than the auto.arima function produced. The closet was ARIMA (2,1,2) which had an AIC of 7122.47 and RMSE of 2.384701, compared to the auto.arima ARIMA (3,1,1) model's AIC of 7119.305 and RMSE of 2.380945. Since lower AIC and RMSE indicates a better fitting model, ARIMA (3,1,1) model with drift is still the optimal choice.
+
+#6
+
+```{r}
+arima_optimal_mod <- arima(nvda_closing_price_xts, order = c(3,1,1))
+plot(forecast(arima_optimal_mod, 60))
+```
+
+Nvidia's closing stock price is expected to remain relatively stable over the next 60 days, with some uncertainty given the number of days forecasted in the future.
