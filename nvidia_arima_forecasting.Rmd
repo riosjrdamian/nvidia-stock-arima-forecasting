@@ -1,5 +1,5 @@
 ---
-title: "Project_6_DamianRiosJr"
+title: "nvidia_arima_forecasting"
 author: "Damian Rios Jr"
 date: "2026-04-09"
 output:
